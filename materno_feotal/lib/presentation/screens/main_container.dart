@@ -59,6 +59,7 @@ class _MainContainerState extends State<MainContainer> {
 }
 
 // Ecran Profil simple
+// Ecran Profil simple
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
@@ -79,9 +80,29 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            const Center(
-              child: Text("Agent de Santé", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            
+            // --- MODIFICATION ICI : Affichage dynamique ---
+            Consumer<AuthProvider>(
+              builder: (context, auth, child) {
+                return Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        auth.agentName ?? "Agent",
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        auth.hospitalName ?? "Centre de Santé",
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
+            // ----------------------------------------------
+
             const SizedBox(height: 40),
             ListTile(
               leading: const Icon(Icons.info),

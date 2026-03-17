@@ -8,6 +8,8 @@ class RendezVousModel {
   final String patientPrenom;
   final String patientNom;
   final String patientTelephone;
+    final String? patientContactUrgenceNom;
+  final String? patientContactUrgenceTel;
 
   RendezVousModel({
     required this.id,
@@ -19,10 +21,13 @@ class RendezVousModel {
     required this.patientPrenom,
     required this.patientNom,
     required this.patientTelephone,
+     this.patientContactUrgenceNom,
+    this.patientContactUrgenceTel,
   });
 
   factory RendezVousModel.fromJson(Map<String, dynamic> json) {
     final patientData = json['patients'] as Map<String, dynamic>?;
+     
 
     return RendezVousModel(
       id: json['id'],
@@ -34,6 +39,10 @@ class RendezVousModel {
       patientPrenom: patientData?['prenom'] ?? 'Inconnu',
       patientNom: patientData?['nom'] ?? 'Inconnu',
       patientTelephone: patientData?['telephone'] ?? 'Inconnu',
+      // Récupération des données d'urgence
+      patientContactUrgenceNom: patientData?['contact_urgence_nom'],
+      patientContactUrgenceTel: patientData?['contact_urgence_telephone'],
+     
     );
   }
 }

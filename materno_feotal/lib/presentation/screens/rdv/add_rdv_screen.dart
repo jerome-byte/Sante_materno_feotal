@@ -1,5 +1,3 @@
-// lib/presentation/screens/rdv/add_rdv_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -17,8 +15,35 @@ class AddRdvScreen extends StatefulWidget {
 class _AddRdvScreenState extends State<AddRdvScreen> {
   final _formKey = GlobalKey<FormState>();
   DateTime? _selectedDate;
-  String _typeRdv = 'CPN';
   bool _isLoading = false;
+
+  // Contrôleurs pour les champs modifiables
+  final _typeRdvController = TextEditingController();
+  final _vaccineController = TextEditingController();
+
+  // Données des vaccins et alertes
+  final Map<String, Map<String, String>> _vaccines = {
+    'BCG': {'name': 'BCG (Tuberculose)', 'risk': 'Protège contre la tuberculose, une maladie grave des poumons.'},
+    'PENTA': {'name': 'Pentavalent (DTP+Hib+HepB)', 'risk': 'Protège contre 5 maladies : Diphtérie, Tétanos, Coqueluche, Hépatite B, Méningite.'},
+    'POLIO': {'name': 'Polio (Poliomyélite)', 'risk': 'Protège contre la paralysie définitive des membres.'},
+    'ROUGEOLE': {'name': 'Rougeole', 'risk': 'Protège contre la rougeole, maladie très contagieuse et mortelle.'},
+    'FIÈVRE JAUNE': {'name': 'Fièvre Jaune', 'risk': 'Protège contre la fièvre hémorragique mortelle.'},
+    'ROR': {'name': 'ROR (Rougeole-Oreillons-Rubéole)', 'risk': 'Protège contre la rougeole, les oreillons et la rubéole.'},
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialisation selon le type de patient
+    if (widget.patient.genre == 'F') {
+      // Mère : Défaut CPN
+      _typeRdvController.text = "Consultation Prénatale (CPN)";
+    } else {
+      // Enfant : Défaut Vaccination
+      _typeRdvController.text = "Vaccination";
+      _vaccineController.text = "BCG"; // Vaccin par défaut
+    }
+  }
 
   Future<void> _pickDate() async {
     final DateTime? picked = await showDatePicker(
@@ -51,52 +76,82 @@ class _AddRdvScreenState extends State<AddRdvScreen> {
   }
 
   Future<void> _saveRdv() async {
-    if (_formKey.currentState!.validate() && _selectedDate != null) {
-      setState(() => _isLoading = true);
-      
-      final success = await Provider.of<PatientProvider>(context, listen: false).addRendezVous(
-        patientId: widget.patient.id,
-        dateHeure: _selectedDate!,
-        typeRdv: _typeRdv,
-      );
-
-      setState(() => _isLoading = false);
-
-      if (success && mounted) {
-        Navigator.pop(context); // Retour au détail patient
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Rendez-vous planifié avec succès")),
-        );
-      }
-    } else if (_selectedDate == null) {
+    if (!_formKey.currentState!.validate()) return;
+    
+    if (_selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez sélectionner une date")),
+        const SnackBar(content: Text("Veuillez sélectionner une date et heure.")),
+      );
+      return;
+    }
+
+    // Récupération des textes saisis
+    final typeRdvText = _typeRdvController.text.trim();
+    final vaccineText = _vaccineController.text.trim();
+
+    // Validation : Si enfant et vaccination, le champ vaccin doit être rempli
+    if (widget.patient.genre == 'M' && typeRdvText.toLowerCase().contains('vaccination') && vaccineText.isEmpty) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez saisir ou choisir un vaccin.")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final provider = Provider.of<PatientProvider>(context, listen: false);
+    
+    final success = await provider.addRendezVous(
+      patientId: widget.patient.id,
+      dateHeure: _selectedDate!,
+      typeRdv: typeRdvText, // Utilise le texte exact saisi
+      nomVaccin: vaccineText.isNotEmpty ? vaccineText : null,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (success && mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Rendez-vous planifié avec succès")),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Détermine le mode : Mère (F) ou Enfant (M)
+    final bool isChild = widget.patient.genre == 'M';
+
+     String? activeAlertKey;
+    _vaccines.forEach((key, value) {
+      if (_vaccineController.text.toUpperCase().contains(key)) {
+        activeAlertKey = key;
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(
         title: Text("RDV pour ${widget.patient.prenom}"),
         backgroundColor: const Color(0xFF1E88E5),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Patient : ${widget.patient.prenom} ${widget.patient.nom}"),
+              Text("Patient : ${widget.patient.prenom} ${widget.patient.nom}", 
+                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 20),
               
-              // Sélection Date
+              // --- DATE ET HEURE ---
               InkWell(
                 onTap: _pickDate,
                 child: InputDecorator(
                   decoration: const InputDecoration(
-                    labelText: "Date et Heure",
+                    labelText: "Date et Heure *",
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.calendar_today),
                   ),
@@ -109,32 +164,137 @@ class _AddRdvScreenState extends State<AddRdvScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Sélection Type
-              DropdownButtonFormField<String>(
-                value: _typeRdv,
-                decoration: const InputDecoration(
-                  labelText: "Type de RDV",
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'CPN', child: Text("Consultation Prénatale")),
-                  DropdownMenuItem(value: 'VACCINATION', child: Text("Vaccination")),
-                  DropdownMenuItem(value: 'AUTRE', child: Text("Autre")),
-                ],
-                onChanged: (val) => setState(() => _typeRdv = val!),
+              // --- TYPE DE RENDEZ-VOUS (MODIFIABLE) ---
+              Autocomplete<String>(
+                initialValue: TextEditingValue(text: _typeRdvController.text),
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  // Options selon le type de patient
+                  List<String> options;
+                  if (isChild) {
+                    // ENFANT : Vaccination et Autre
+                    options = ['Vaccination', 'Autre'];
+                  } else {
+                    // MÈRE : CPN et Autre
+                    options = ['Consultation Prénatale (CPN)', 'Autre'];
+                  }
+
+                  if (textEditingValue.text.isEmpty) {
+                    return options;
+                  }
+                  return options.where((String option) {
+                    return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                  });
+                },
+                onSelected: (String selection) {
+                  setState(() {
+                    _typeRdvController.text = selection;
+                  });
+                },
+                fieldViewBuilder: (BuildContext context, TextEditingController fieldController, FocusNode focusNode, VoidCallback onFieldSubmitted) {
+                  return TextFormField(
+                    controller: fieldController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      labelText: "Type de Rendez-vous *",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (String value) {
+                      // Mise à jour temps réel pour afficher/masquer le champ vaccin
+                      setState(() {
+                         _typeRdvController.text = value;
+                      });
+                    },
+                    validator: (v) => v!.isEmpty ? "Requis" : null,
+                  );
+                },
               ),
-              
-              const SizedBox(height: 30),
-              
-              ElevatedButton(
-                onPressed: _isLoading ? null : _saveRdv,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E88E5),
-                  minimumSize: const Size(double.infinity, 50),
+
+              // --- SÉLECTEUR DE VACCIN (SEULEMENT POUR ENFANT + VACCINATION) ---
+              if (isChild && _typeRdvController.text.toLowerCase().contains('vaccination')) ...[
+                const SizedBox(height: 20),
+                const Text("Choix du Vaccin :", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 5),
+                
+                Autocomplete<String>(
+                  initialValue: TextEditingValue(text: _vaccineController.text),
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    final options = _vaccines.keys.toList();
+                    if (textEditingValue.text.isEmpty) {
+                      return options;
+                    }
+                    return options.where((String option) {
+                      return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                    });
+                  },
+                  onSelected: (String selection) {
+                    setState(() {
+                      _vaccineController.text = selection;
+                    });
+                  },
+                  fieldViewBuilder: (BuildContext context, TextEditingController fieldController, FocusNode focusNode, VoidCallback onFieldSubmitted) {
+                    return TextFormField(
+                      controller: fieldController,
+                      focusNode: focusNode,
+                      decoration: InputDecoration(
+                        labelText: "Nom du vaccin",
+                        border: const OutlineInputBorder(),
+                        filled: true,
+                        fillColor: Colors.blue[50],
+                      ),
+                      onChanged: (String value) {
+                        setState(() {
+                           _vaccineController.text = value;
+                        });
+                      },
+                    );
+                  },
                 ),
-                child: _isLoading 
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text("ENREGISTRER LE RENDEZ-VOUS", style: TextStyle(color: Colors.white)),
+
+                                // ALERTE DYNAMIQUE (Corrigé)
+                // On vérifie si le texte SAISI contient une clé connue (ex: "BCG")
+                // Cela permet d'afficher l'alerte même si l'utilisateur ajoute du texte après (ex: "BCG dose 2"
+
+                // Si une clé est trouvée, on affiche l'alerte correspondante
+                if (activeAlertKey != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _vaccines[activeAlertKey]!['risk']!,
+                            style: const TextStyle(fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                ],
+
+              const SizedBox(height: 30),
+
+              // --- BOUTON ENREGISTRER ---
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E88E5),
+                  ),
+                  onPressed: _isLoading ? null : _saveRdv,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text("ENREGISTRER", style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
               ),
             ],
           ),

@@ -8,10 +8,15 @@ class AuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isAuthenticated = false; // L'utilisateur est-il connecté ?
+   // --- NOUVEAUTES : Variables pour stocker les infos de l'agent ---
+  String? _agentName;
+  String? _hospitalName;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isAuthenticated => _isAuthenticated;
+   String? get agentName => _agentName;
+  String? get hospitalName => _hospitalName;
 
   // Vérifier l'état de connexion au démarrage
   AuthProvider() {
@@ -21,6 +26,30 @@ class AuthProvider with ChangeNotifier {
   void _checkSession() {
     final session = SupabaseService.client.auth.currentSession;
     _isAuthenticated = session != null;
+    
+    if (_isAuthenticated) {
+      // Si connecté, on charge les infos du profil
+      _loadAgentProfile(session!.user.id);
+    }
+    notifyListeners();
+  }
+
+  // --- NOUVEAU : Fonction pour charger le profil depuis la table 'agents' ---
+  Future<void> _loadAgentProfile(String userId) async {
+    try {
+      final response = await SupabaseService.client
+          .from('agents')
+          .select('full_name, centre_sante')
+          .eq('id', userId)
+          .single();
+
+      _agentName = response['full_name'];
+      _hospitalName = response['centre_sante'];
+    } catch (e) {
+      debugPrint("Erreur chargement profil agent: $e");
+      _agentName = "Agent";
+      _hospitalName = "Centre Inconnu";
+    }
     notifyListeners();
   }
 
@@ -39,6 +68,7 @@ class AuthProvider with ChangeNotifier {
       if (response.user != null) {
         _isAuthenticated = true;
         // Note: Ici on pourrait vérifier si l'utilisateur existe dans la table 'agents'
+        await _loadAgentProfile(response.user!.id);
       } else {
         _errorMessage = "Aucun utilisateur trouvé.";
       }
@@ -55,6 +85,9 @@ class AuthProvider with ChangeNotifier {
   Future<void> logout() async {
     await SupabaseService.client.auth.signOut();
     _isAuthenticated = false;
+    // On efface les infos
+    _agentName = null;
+    _hospitalName = null;
     notifyListeners();
   }
 
@@ -94,7 +127,10 @@ if (response.session != null) {
   _isAuthenticated = true;
   notifyListeners();
 }
-        
+        // On connecte et on sauvegarde les infos localement
+        _isAuthenticated = true;
+        _agentName = fullName;
+        _hospitalName = hospitalName;
         // 3. Connecter automatiquement l'utilisateur (Supabase le fait souvent automatiquement après le signUp, mais on s'assure)
         _isAuthenticated = true;
         

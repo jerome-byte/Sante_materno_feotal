@@ -64,9 +64,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Bonjour, Agent de Santé",
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                   // Section Titre (Dynamique)
+                  Consumer<AuthProvider>(
+                    builder: (context, auth, child) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Bonjour, ${auth.agentName ?? 'Agent'}",
+                            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            auth.hospitalName ?? "Centre de Santé",
+                            style: const TextStyle(fontSize: 14, color: Color.fromARGB(255, 95, 94, 94)),
+                          ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
 

@@ -17,24 +17,46 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   final _prenomController = TextEditingController();
   final _nomController = TextEditingController();
   final _telephoneController = TextEditingController();
-    // Contrôleurs pour le garant
+  // Contrôleurs pour le garant
   final _garantNomController = TextEditingController();
   final _garantTelephoneController = TextEditingController();
-  
-  
+  // Ajoutez ces deux contrôleurs
+  final _typeRdvController = TextEditingController();
+  final _vaccineController = TextEditingController();
+
   late String _genre;
   DateTime? _selectedDateRdv;
   String _typeRdv = 'CPN';
-  
+
   // Nouveaux champs pour la vaccination
   String? _selectedVaccineKey; // Clé du vaccin sélectionné
   final Map<String, Map<String, String>> _vaccines = {
-    'BCG': {'name': 'BCG (Tuberculose)', 'risk': 'Protège contre la tuberculose, une maladie grave des poumons.'},
-    'PENTA': {'name': 'Pentavalent (DTP+Hib+HepB)', 'risk': 'Protège contre 5 maladies : Diphtérie, Tétanos, Coqueluche, Hépatite B, Méningite.'},
-    'POLIO': {'name': 'Polio (Poliomyélite)', 'risk': 'Protège contre la paralysie définitive des membres.'},
-    'ROUGEOLE': {'name': 'Rougeole', 'risk': 'Protège contre la rougeole, maladie très contagieuse et mortelle.'},
-    'FIÈVRE JAUNE': {'name': 'Fièvre Jaune', 'risk': 'Protège contre la fièvre hémorragique mortelle.'},
-    'ROR': {'name': 'ROR (Rougeole-Oreillons-Rubéole)', 'risk': 'Protège contre la rougeole, les oreillons et la rubéole.'},
+    'BCG': {
+      'name': 'BCG (Tuberculose)',
+      'risk': 'Protège contre la tuberculose, une maladie grave des poumons.',
+    },
+    'PENTA': {
+      'name': 'Pentavalent (DTP+Hib+HepB)',
+      'risk':
+          'Protège contre 5 maladies : Diphtérie, Tétanos, Coqueluche, Hépatite B, Méningite.',
+    },
+    'POLIO': {
+      'name': 'Polio (Poliomyélite)',
+      'risk': 'Protège contre la paralysie définitive des membres.',
+    },
+    'ROUGEOLE': {
+      'name': 'Rougeole',
+      'risk':
+          'Protège contre la rougeole, maladie très contagieuse et mortelle.',
+    },
+    'FIÈVRE JAUNE': {
+      'name': 'Fièvre Jaune',
+      'risk': 'Protège contre la fièvre hémorragique mortelle.',
+    },
+    'ROR': {
+      'name': 'ROR (Rougeole-Oreillons-Rubéole)',
+      'risk': 'Protège contre la rougeole, les oreillons et la rubéole.',
+    },
   };
 
   bool _isLoading = false;
@@ -43,23 +65,30 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   void initState() {
     super.initState();
     _genre = widget.mother != null ? 'M' : 'F';
+
     if (widget.mother != null) {
+      // MODE ENFANT
       _nomController.text = widget.mother!.nom;
       _telephoneController.text = widget.mother!.telephone;
-      _typeRdv = 'VACCINATION';
-      _selectedVaccineKey = 'BCG'; // Par défaut pour nouveau-né
+      _typeRdvController.text = "Vaccination"; // Défaut Enfant
+      _vaccineController.text = "BCG"; // Défaut Vaccin
+    } else {
+      // MODE MÈRE
+      _typeRdvController.text = "Consultation Prénatale (CPN)"; // Défaut Mère
     }
   }
 
   // Fonction de date corrigée (sans blocage)
   Future<void> _pickDate() async {
     final DateTime now = DateTime.now();
-    
+
     // 1. Sélection de la date
     final DateTime? pickedDate = await showDatePicker(
       context: context,
       initialDate: now,
-      firstDate: now.subtract(const Duration(days: 30)), // Autorise passé récent
+      firstDate: now.subtract(
+        const Duration(days: 30),
+      ), // Autorise passé récent
       lastDate: DateTime(now.year + 5),
       builder: (context, child) {
         return Theme(
@@ -102,18 +131,26 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
 
   Future<void> _savePatientAndRdv() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_selectedDateRdv == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez sélectionner une date de rendez-vous.")),
+        const SnackBar(
+          content: Text("Veuillez sélectionner une date de rendez-vous."),
+        ),
       );
       return;
     }
-    
-    // Validation spécifique vaccin
-    if (_typeRdv == 'VACCINATION' && _selectedVaccineKey == null) {
-       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Veuillez sélectionner un type de vaccin.")),
+    // On récupère directement le texte saisi
+    final typeRdvText = _typeRdvController.text.trim();
+    final vaccineText = _vaccineController.text.trim();
+    final bool isChildMode = widget.mother != null;
+
+    // Validation spécifique : Si c'est un enfant et que le type contient "vaccination", le champ vaccin doit être rempli
+    if (isChildMode &&
+        typeRdvText.toLowerCase().contains('vaccination') &&
+        vaccineText.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Veuillez saisir ou choisir un vaccin.")),
       );
       return;
     }
@@ -121,35 +158,38 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
     setState(() => _isLoading = true);
 
     final provider = Provider.of<PatientProvider>(context, listen: false);
+
     final patientId = await provider.addPatient(
       prenom: _prenomController.text.trim(),
       nom: _nomController.text.trim(),
       telephone: _telephoneController.text.trim(),
       genre: _genre,
       motherId: widget.mother?.id,
-            // Ajoutez ces deux lignes dans les paramètres de addPatient
+      // Ajoutez ces deux lignes dans les paramètres de addPatient
       contactUrgenceNom: _garantNomController.text.trim(),
       contactUrgenceTel: _garantTelephoneController.text.trim(),
-      
     );
 
     if (patientId != null) {
-      // Déterminer le nom du vaccin à sauvegarder
-      String? vaccineName;
-      if (_typeRdv == 'VACCINATION' && _selectedVaccineKey != null) {
-        vaccineName = _vaccines[_selectedVaccineKey]!['name'];
-      }
-
       await provider.addRendezVous(
         patientId: patientId,
         dateHeure: _selectedDateRdv!,
-        typeRdv: _typeRdv,
-        nomVaccin: vaccineName, // On sauvegarde le nom complet
+        typeRdv:
+            typeRdvText, // Utilise le texte saisi (ex: "Vaccination" ou "Autre...")
+        nomVaccin: vaccineText.isNotEmpty
+            ? vaccineText
+            : null, // Ajoute le nom du vaccin si rempli
       );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_genre == 'M' ? "Enfant enregistré avec succès !" : "Patiente enregistrée !")),
+          SnackBar(
+            content: Text(
+              _genre == 'M'
+                  ? "Enfant enregistré avec succès !"
+                  : "Patiente enregistrée !",
+            ),
+          ),
         );
         Navigator.pop(context);
       }
@@ -166,9 +206,21 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
   Widget build(BuildContext context) {
     final bool isChildMode = widget.mother != null;
 
+    // --- LOGIQUE DE L'ALERTE (Calculée avant l'affichage) ---
+    // On cherche si le texte saisi contient un nom de vaccin connu
+    String? activeAlertKey;
+    _vaccines.forEach((key, value) {
+      if (_vaccineController.text.toUpperCase().contains(key)) {
+        activeAlertKey = key;
+      }
+    });
+
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(isChildMode ? "Enregistrer un Enfant" : "Nouvelle Patiente"),
+        title: Text(
+          isChildMode ? "Enregistrer un Enfant" : "Nouvelle Patiente",
+        ),
         backgroundColor: const Color(0xFF1E88E5),
       ),
       body: SingleChildScrollView(
@@ -182,8 +234,13 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                 Card(
                   color: Colors.pink[50],
                   child: ListTile(
-                    leading: const Icon(Icons.pregnant_woman, color: Colors.pink),
-                    title: Text("Mère : ${widget.mother!.prenom} ${widget.mother!.nom}"),
+                    leading: const Icon(
+                      Icons.pregnant_woman,
+                      color: Colors.pink,
+                    ),
+                    title: Text(
+                      "Mère : ${widget.mother!.prenom} ${widget.mother!.nom}",
+                    ),
                   ),
                 ),
               const SizedBox(height: 15),
@@ -194,7 +251,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _prenomController,
-                      decoration: const InputDecoration(labelText: "Prénom *", border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: "Prénom *",
+                        border: OutlineInputBorder(),
+                      ),
                       validator: (v) => v!.isEmpty ? "Requis" : null,
                     ),
                   ),
@@ -202,7 +262,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _nomController,
-                      decoration: const InputDecoration(labelText: "Nom *", border: OutlineInputBorder()),
+                      decoration: const InputDecoration(
+                        labelText: "Nom *",
+                        border: OutlineInputBorder(),
+                      ),
                       validator: (v) => v!.isEmpty ? "Requis" : null,
                     ),
                   ),
@@ -213,16 +276,25 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
               TextFormField(
                 controller: _telephoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: "Téléphone *", prefixIcon: Icon(Icons.phone), border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                  labelText: "Téléphone *",
+                  prefixIcon: Icon(Icons.phone),
+                  border: OutlineInputBorder(),
+                ),
                 validator: (v) => v!.isEmpty ? "Requis" : null,
               ),
               const SizedBox(height: 15),
-                            // --- DEBUT BLOC GARANT ---
+              // --- DEBUT BLOC GARANT ---
               const Divider(),
-              const Text("Personne à contacter en cas d'absence", 
-                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E88E5))),
+              const Text(
+                "Personne à contacter en cas d'absence",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E88E5),
+                ),
+              ),
               const SizedBox(height: 10),
-              
+
               TextFormField(
                 controller: _garantNomController,
                 decoration: const InputDecoration(
@@ -248,59 +320,131 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   border: OutlineInputBorder(),
                 ),
                 validator: (v) {
-                   if (_genre == 'F' && (v == null || v.isEmpty)) {
+                  if (_genre == 'F' && (v == null || v.isEmpty)) {
                     return "Ce contact sera utilisé pour les relances";
                   }
                   return null;
                 },
               ),
-             
+
               // --- FIN BLOC GARANT ---
-                const SizedBox(height: 15),
+              const SizedBox(height: 15),
               // Sélection Type RDV
-              DropdownButtonFormField<String>(
-                value: _typeRdv,
-                decoration: const InputDecoration(labelText: "Type de Rendez-vous", border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'CPN', child: Text("Consultation Prénatale (CPN)")),
-                  DropdownMenuItem(value: 'VACCINATION', child: Text("Vaccination")),
-                  DropdownMenuItem(value: 'AUTRE', child: Text("Autre")),
-                ],
-                onChanged: (val) => setState(() {
-                  _typeRdv = val!;
-                  _selectedVaccineKey = null; // Reset vaccin si on change de type
-                }),
+              // Sélection Type RDV (Modifiable avec suggestions)
+              // Sélection Type RDV (Modifiable avec suggestions)
+                            // Sélection Type RDV
+              Autocomplete<String>(
+                initialValue: TextEditingValue(text: _typeRdvController.text),
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  // On définit les options EXACTES
+                  List<String> options;
+                  if (isChildMode) {
+                    // Pour l'ENFANT : Vaccination et Autre
+                    options = ['Vaccination', 'Autre'];
+                  } else {
+                    // Pour la MÈRE : CPN et Autre
+                    options = ['Consultation Prénatale (CPN)', 'Autre'];
+                  }
+
+                  // Si le champ est vide, on montre tout
+                  if (textEditingValue.text.isEmpty) {
+                    return options;
+                  }
+                  
+                  // Sinon on filtre
+                  return options.where((String option) {
+                    return option.toLowerCase().contains(textEditingValue.text.toLowerCase());
+                  });
+                },
+                onSelected: (String selection) {
+                  setState(() {
+                    _typeRdvController.text = selection;
+                  });
+                },
+                fieldViewBuilder: (BuildContext context, TextEditingController fieldController, FocusNode focusNode, VoidCallback onFieldSubmitted) {
+                  return TextFormField(
+                    controller: fieldController,
+                    focusNode: focusNode,
+                    decoration: const InputDecoration(
+                      labelText: "Type de Rendez-vous *",
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (String value) {
+                      setState(() {
+                        _typeRdvController.text = value;
+                      });
+                    },
+                    validator: (v) => v!.isEmpty ? "Requis" : null,
+                  );
+                },
               ),
-              
+
               // SÉLECTEUR DE VACCIN AMÉLIORÉ
-              if (_typeRdv == 'VACCINATION') ...[
+              // SÉLECTEUR DE VACCIN (Modifiable)
+              // On affiche ce bloc SEULEMENT si c'est un enfant ET que le type contient "Vaccination"
+              if (isChildMode &&
+                  _typeRdvController.text.toLowerCase().contains(
+                    'vaccination',
+                  )) ...[
                 const SizedBox(height: 15),
-                const Text("Choix du Vaccin :", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  "Choix du Vaccin :",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 5),
-                
-                DropdownButtonFormField<String>(
-                  value: _selectedVaccineKey,
-                  decoration: InputDecoration(
-                    labelText: "Sélectionner le vaccin",
-                    border: const OutlineInputBorder(),
-                    filled: true,
-                    fillColor: Colors.blue[50],
-                  ),
-                  items: _vaccines.keys.map((key) {
-                    return DropdownMenuItem(
-                      value: key,
-                      child: Text(_vaccines[key]!['name']!),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedVaccineKey = val;
+
+                Autocomplete<String>(
+                  initialValue: TextEditingValue(text: _vaccineController.text),
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    final options = _vaccines.keys
+                        .toList(); // Liste des vaccins (BCG, POLIO...)
+                    if (textEditingValue.text.isEmpty) {
+                      return options;
+                    }
+                    return options.where((String option) {
+                      return option.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      );
                     });
                   },
+                  onSelected: (String selection) {
+                    // CORRECTION ICI : Mise à jour de l'état pour afficher l'alerte
+                    setState(() {
+                      _vaccineController.text = selection;
+                    });
+                  },
+                  fieldViewBuilder:
+                      (
+                        BuildContext context,
+                        TextEditingController fieldController,
+                        FocusNode focusNode,
+                        VoidCallback onFieldSubmitted,
+                      ) {
+                        return TextFormField(
+                          controller: fieldController,
+                          focusNode: focusNode,
+                          decoration: InputDecoration(
+                            labelText: "Nom du vaccin",
+                            border: const OutlineInputBorder(),
+                            filled: true,
+                            fillColor: Colors.blue[50],
+                          ),
+                          onChanged: (String value) {
+                            // CORRECTION ICI : Mise à jour temps réel de l'alerte
+                            setState(() {
+                              _vaccineController.text = value;
+                            });
+                          },
+                        );
+                      },
                 ),
-                
-                // Message d'alerte éducatif
-                if (_selectedVaccineKey != null) ...[
+
+                // Message d'alerte éducatif (Dynamique)
+                // S'affiche si le texte correspond à une clé connue
+                // Cela permet d'afficher l'alerte même si l'utilisateur ajoute du texte après (ex: "BCG dose 2"
+
+                // Si une clé est trouvée, on affiche l'alerte correspondante
+                if (activeAlertKey != null) ...[
                   const SizedBox(height: 10),
                   Container(
                     padding: const EdgeInsets.all(10),
@@ -315,7 +459,7 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            _vaccines[_selectedVaccineKey]!['risk']!,
+                            _vaccines[activeAlertKey]!['risk']!,
                             style: const TextStyle(fontSize: 13),
                           ),
                         ),
@@ -323,12 +467,15 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                     ),
                   ),
                 ],
-              ],
+                ],
 
               const SizedBox(height: 20),
-              const Text("Date du Rendez-vous", style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                "Date du Rendez-vous",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 5),
-              
+
               InkWell(
                 onTap: _pickDate,
                 child: InputDecorator(
@@ -339,11 +486,13 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   child: Text(
                     _selectedDateRdv == null
                         ? "Sélectionner date et heure"
-                        : DateFormat('dd/MM/yyyy à HH:mm').format(_selectedDateRdv!),
+                        : DateFormat(
+                            'dd/MM/yyyy à HH:mm',
+                          ).format(_selectedDateRdv!),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 30),
 
               // Bouton Enregistrer
@@ -357,7 +506,10 @@ class _AddPatientScreenState extends State<AddPatientScreen> {
                   onPressed: _isLoading ? null : _savePatientAndRdv,
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("ENREGISTRER", style: TextStyle(color: Colors.white, fontSize: 16)),
+                      : const Text(
+                          "ENREGISTRER",
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
                 ),
               ),
             ],

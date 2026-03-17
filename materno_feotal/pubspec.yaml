@@ -56,6 +56,7 @@ dependencies:
   path_provider: ^2.1.1
   # Pour ouvrir le fichier PDF
   open_file: ^3.3.2
+  url_launcher: ^6.2.1
 
 dev_dependencies:
   flutter_test:
@@ -72,12 +73,17 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/icons/logo.png
+    - assets/icon/logo.png
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
-
+flutter_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/logo.png" # Le chemin de votre image
+  adaptive_icon_background: "#1E88E5" # Couleur de fond (bleu)
+  adaptive_icon_foreground: "assets/icon/logo.png"
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
