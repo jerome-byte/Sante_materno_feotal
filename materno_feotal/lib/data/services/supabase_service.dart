@@ -13,8 +13,10 @@ class SupabaseService {
       anonKey: AppConfig.supabaseAnonKey,
       debug: true,
       // Configuration critique pour Windows/Desktop
+      // Configuration critique pour Windows/Desktop
       authOptions: const FlutterAuthClientOptions(
         authFlowType: AuthFlowType.implicit,
+        
       ),
     );
   }

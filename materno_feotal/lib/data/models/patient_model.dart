@@ -31,8 +31,8 @@ class PatientModel {
         this.createdAt, // Ajoutez cette ligne
             this.createdBy, // Ajoutez ceci
   });
-
-  // Factory pour créer un objet Patient à partir du JSON de Supabase
+  
+    // Factory pour créer un objet Patient à partir du JSON de Supabase
   factory PatientModel.fromJson(Map<String, dynamic> json) {
     return PatientModel(
       id: json['id'],

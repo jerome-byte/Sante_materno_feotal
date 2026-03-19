@@ -1,8 +1,6 @@
 // lib/presentation/screens/splash_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:materno_feotal/presentation/providers/auth_provider.dart';
 import 'package:materno_feotal/presentation/screens/auth/login_screen.dart';
 import 'main_container.dart';
 import '../../data/services/supabase_service.dart';

@@ -30,11 +30,18 @@ android {
         versionName = flutter.versionName
     }
 
-    buildTypes {
+        buildTypes {
+        debug {
+            // Debug config
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Ligne importante pour signer
             signingConfig = signingConfigs.getByName("debug")
+            
+            // --- AJOUTS CRITIQUES ICI ---
+            isShrinkResources = false
+            isMinifyEnabled = false
+            // -----------------------------
         }
     }
 }

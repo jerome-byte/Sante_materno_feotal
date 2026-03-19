@@ -91,13 +91,16 @@ class PatientProvider with ChangeNotifier {
   int get perdusDeVue => _perdusDeVue;
 
   // Récupérer les données du tableau de bord
+    // Récupérer les données du tableau de bord (VERSION FINALE CORRIGÉE)
+     // Récupérer les données du tableau de bord
    Future<void> fetchDashboardData() async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final userId = SupabaseService.client.auth.currentUser?.id;
+      // Récupération robuste de l'ID (Gère le chargement Web)
+     final userId = SupabaseService.client.auth.currentUser?.id;
       debugPrint("========================================");
       debugPrint("DEBUG: ID Utilisateur Connecté = $userId");
       debugPrint("========================================");
@@ -137,6 +140,7 @@ class PatientProvider with ChangeNotifier {
 
         
       ]);
+
 
       // --- TRAITEMENT DES RÉSULTATS ---
 
@@ -188,8 +192,7 @@ class PatientProvider with ChangeNotifier {
           }
         }
       }
-
-      // 4. Perdus de vue (Le compteur rouge)
+// 4. Perdus de vue (Le compteur rouge)
       // On utilise directement le résultat de la requête 4
       // Cette requête compte les RDV "PLANIFIE" dont la date est passée
       
@@ -202,6 +205,7 @@ class PatientProvider with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
 
   // ... suite de patient_provider.dart
   Future<int?> addPatient({

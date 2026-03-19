@@ -50,11 +50,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
           )
         ],
       ),
-      body: Consumer<PatientProvider>(
+            body: Consumer<PatientProvider>(
         builder: (context, provider, child) {
+          
+          // AFFICHAGE DE L'ERREUR
+          if (provider.errorMessage != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, color: Colors.red, size: 50),
+                    const SizedBox(height: 10),
+                    Text(
+                      "Erreur de chargement",
+                      style: TextStyle(color: Colors.red, fontSize: 18),
+                    ),
+                    Text(
+                      provider.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => provider.fetchDashboardData(),
+                      child: Text("Réessayer"),
+                    )
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (provider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
+
+          // ... suite du code normal ...
 
           return RefreshIndicator(
             onRefresh: () => provider.fetchDashboardData(),

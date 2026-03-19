@@ -4,10 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_filex/open_filex.dart';
 import '../providers/patient_provider.dart';
 import '../../data/models/patient_model.dart';
-import '../../data/models/rendez_vous_model.dart';
 import 'package:intl/intl.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -143,7 +142,7 @@ class _ReportsScreenState extends State<ReportsScreen>
       await file.writeAsBytes(await pdf.save());
       
       // Ouverture
-      await OpenFile.open(file.path);
+      await OpenFilex.open(file.path);
 
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erreur: $e")));

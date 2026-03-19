@@ -25,6 +25,7 @@ class RendezVousModel {
     this.patientContactUrgenceTel,
   });
 
+ 
   factory RendezVousModel.fromJson(Map<String, dynamic> json) {
     final patientData = json['patients'] as Map<String, dynamic>?;
      
